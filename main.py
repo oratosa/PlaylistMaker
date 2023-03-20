@@ -76,7 +76,7 @@ class Scraping:
             if re.search(r"[0-9]{2}", l):
                 num = re.search(r"[0-9]{2}", l)
                 num = num.group()
-                track = re.sub(r"([0-9]{2}. )|( / )|(/ )|( // )", '//', l) #（曲順. 曲名 / アーティスト名 // アルバム名）
+                track = re.sub(r"([0-9]{2}\. )|( / )|(/ )|( // )", '//', l) #（曲順. 曲名 / アーティスト名 // アルバム名）
                 track = re.sub(r"'",'\'',track)
                 track = num + track
                 track = track.split("//")
