@@ -5,6 +5,7 @@ import functions_framework
 from bs4 import BeautifulSoup
 from datetime import datetime
 
+
 @functions_framework.cloud_event
 def handler(cloud_event):
     # scraping
@@ -26,47 +27,51 @@ def handler(cloud_event):
     # get the track information from spotify
     uris = playlistmaker.generate_track_id_list(track_list)
 
-    print(f"Track's Spotify URIs based on the scraping result on {on_air_date} are the following...")
+    print(
+        f"Track's Spotify URIs based on the scraping result on {on_air_date} are the following..."
+    )
     [print(f"{i+1},{j}") for i, j in enumerate(uris)]
 
     # make a playlist
     available_uris = [row[0] for row in uris if row[0] != "URI is not found"]
     name = f"Weekend Sunshine by Peter Barakan {on_air_date}"
-    description = """NHKのラジオ番組 Weekend Sunshine で放送された楽曲をプレイリストにしています。自動的に作成しているため誤りがあるかもしれません。"""
+    description = (
+        """NHKのラジオ番組 Weekend Sunshine で放送された楽曲をプレイリストにしています。自動的に作成しているため誤りがあるかもしれません。"""
+    )
 
     playlist_id = playlistmaker.identify_playlist(name)
-    if playlist_id is None: 
+    if playlist_id is None:
         playlistmaker.make_playlist(name, description, available_uris)
         print("A new playlist was made.")
-    else: ## if the playlist is already existed, remove the tracks and readd the tracks.  
+    else:  ## if the playlist is already existed, remove the tracks and readd the tracks.
         track_list = playlistmaker.get_tracks_from_playlist(playlist_id)
-        playlistmaker.sp.playlist_remove_all_occurrences_of_items(playlist_id, track_list)
+        playlistmaker.sp.playlist_remove_all_occurrences_of_items(
+            playlist_id, track_list
+        )
         playlistmaker.sp.playlist_add_items(playlist_id, available_uris)
         print("The tracks in the existing playlist were deleted and added again.")
-    
+
     print("The procedure was finished.")
 
+
 class Scraping:
-    def __init__(self,url="https://www4.nhk.or.jp/sunshine/66/") -> None:
-        self.url = url
-        self.html = self.get_html()
+    def __init__(self) -> None:
+        self.url = None
+        self.html = None
         pass
 
-    def get_html(self):
-        data = requests.get(self.url)
+    def get_html(self, url):
+        data = requests.get(url)
         soup = BeautifulSoup(data.content, "html.parser")
-        html = soup.find("div", class_="option-media-row")
-        return html
-    
+        return soup
+
     def get_on_air_date(self, html) -> datetime.date:
-        text = html.h2.get_text("\n").strip()
+        text = html.get_text()
         text = unicodedata.normalize("NFKC", text)
-        for i, l in enumerate(text.splitlines()):
-            if i == 0:
-                result = re.findall(r"\d+",l)
-                on_air_date = "-".join(result)
-                on_air_date = datetime.strptime(on_air_date,"%Y-%m-%d").date()
-                return on_air_date
+        result = re.findall(r"[0-9]+", text)
+        on_air_date = "-".join(result)
+        on_air_date = datetime.strptime(on_air_date, "%Y-%m-%d").date()
+        return on_air_date
 
     def generate_track_list(self, html) -> list:
         text = html.p.get_text("\n").strip()
@@ -76,12 +81,15 @@ class Scraping:
             if re.search(r"[0-9]{2}", l):
                 num = re.search(r"[0-9]{2}", l)
                 num = num.group()
-                track = re.sub(r"([0-9]{2}\. )|( / )|(/ )|( // )", '//', l) #（曲順. 曲名 / アーティスト名 // アルバム名）
-                track = re.sub(r"'",'\'',track)
+                track = re.sub(
+                    r"([0-9]{2}\. )|( / )|(/ )|( // )", "//", l
+                )  # （曲順. 曲名 / アーティスト名 // アルバム名）
+                track = re.sub(r"'", "'", track)
                 track = num + track
                 track = track.split("//")
                 track_list.append(track)
         return track_list
+
 
 class PlaylistMaker:
     def __init__(self) -> None:
@@ -93,10 +101,16 @@ class PlaylistMaker:
         pass
 
     def authorization(self):
-        scope = 'user-library-read playlist-modify-public'
-        cache_handler = spotipy.cache_handler.CacheFileHandler(cache_path='.cache')
-        auth_manager = SpotifyOAuth(client_id=self.client_id, client_secret=self.client_secret, redirect_uri=self.redirect_uri, cache_handler=cache_handler, scope=scope)
-        
+        scope = "user-library-read playlist-modify-public"
+        cache_handler = spotipy.cache_handler.CacheFileHandler(cache_path=".cache")
+        auth_manager = SpotifyOAuth(
+            client_id=self.client_id,
+            client_secret=self.client_secret,
+            redirect_uri=self.redirect_uri,
+            cache_handler=cache_handler,
+            scope=scope,
+        )
+
         sp = spotipy.Spotify(auth_manager=auth_manager)
 
         return sp
@@ -118,15 +132,17 @@ class PlaylistMaker:
                 uris.append(uri)
         return uris
 
-    def get_spotify_track_info(self, track: str, artist: str, album:str) -> tuple:
+    def get_spotify_track_info(self, track: str, artist: str, album: str) -> tuple:
         query = f"{track} artist:{artist}"
         results = self.sp.search(q=query, type="track", limit=50)
 
         if results["tracks"]["total"] != 0:
-            candidate =  (results["tracks"]["items"][0]["uri"]
-                        ,results["tracks"]["items"][0]["name"]
-                        ,results["tracks"]["items"][0]["artists"][0]["name"]
-                        ,results["tracks"]["items"][0]["album"]["name"])
+            candidate = (
+                results["tracks"]["items"][0]["uri"],
+                results["tracks"]["items"][0]["name"],
+                results["tracks"]["items"][0]["artists"][0]["name"],
+                results["tracks"]["items"][0]["album"]["name"],
+            )
 
             for result in results["tracks"]["items"]:
                 uri = result["uri"]
@@ -134,12 +150,18 @@ class PlaylistMaker:
                 artist_name = result["artists"][0]["name"]
                 album_name = result["album"]["name"]
 
-                if track_name in track and artist_name in artist and album_name in album:
-                    print(f"Track:{track_name}, Artist:{artist_name}, Album:{album_name} were all matched!!!")
+                if (
+                    track_name in track
+                    and artist_name in artist
+                    and album_name in album
+                ):
+                    print(
+                        f"Track:{track_name}, Artist:{artist_name}, Album:{album_name} were all matched!!!"
+                    )
                     candidate = (uri, track_name, artist_name, album_name)
 
                     break
-                
+
             return candidate
 
         else:
@@ -150,7 +172,9 @@ class PlaylistMaker:
         playlist_name = name
         playlist_description = description
 
-        playlist = self.sp.user_playlist_create(self.user_id, playlist_name, public=True, description=playlist_description)
+        playlist = self.sp.user_playlist_create(
+            self.user_id, playlist_name, public=True, description=playlist_description
+        )
         playlist_id = playlist["id"]
         self.sp.playlist_add_items(playlist_id, uris)
 
