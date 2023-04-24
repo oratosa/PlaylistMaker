@@ -24,3 +24,15 @@ def test_get_on_air_date(sample_scraper: Scraping):
     on_air_date = sample_scraper.get_on_air_date(html)
     test_date = datetime.strptime("2023-4-22", "%Y-%m-%d").date()
     assert on_air_date == test_date
+
+
+def test_generate_track_list(sample_scraper: Scraping):
+    html = sample_scraper.html.find("div", class_="article-text").find("ol")
+    track_list = sample_scraper.generate_track_list(html)
+    assert track_list[0] == ["01", "Looking For Clues", "Robert Palmer", "Clues"]
+    assert track_list[14] == [
+        "15",
+        "I Still Haven’t Found What I’m Looking For",
+        "U2",
+        "Songs Of Surrender",
+    ]

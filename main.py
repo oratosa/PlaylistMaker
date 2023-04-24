@@ -74,20 +74,16 @@ class Scraping:
         return on_air_date
 
     def generate_track_list(self, html) -> list:
-        text = html.p.get_text("\n").strip()
-        text = unicodedata.normalize("NFKC", text)
         track_list = []
-        for l in text.splitlines():
-            if re.search(r"[0-9]{2}", l):
-                num = re.search(r"[0-9]{2}", l)
-                num = num.group()
-                track = re.sub(
-                    r"([0-9]{2}\. )|( / )|(/ )|( // )", "//", l
-                )  # （曲順. 曲名 / アーティスト名 // アルバム名）
-                track = re.sub(r"'", "'", track)
-                track = num + track
-                track = track.split("//")
-                track_list.append(track)
+        for i, l in enumerate(html.find_all("li")):
+            num = str(i + 1).zfill(2)
+            text = l.text.strip()
+            text = unicodedata.normalize("NFKC", text)
+            track = re.sub(r"( / )|( // )", "//", text)  # （曲順. 曲名 / アーティスト名 // アルバム名）
+            track = re.sub(r"'", "'", track)
+            track = num + "//" + track
+            track = track.split("//")
+            track_list.append(track)
         return track_list
 
 
