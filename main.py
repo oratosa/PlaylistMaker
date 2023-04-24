@@ -12,11 +12,17 @@ def handler(cloud_event):
     pubsub_message = base64.b64decode(cloud_event.data["message"]["data"]).decode()
     print(f"Pub/Sub message is {pubsub_message}")
     print("A scraping procedure starts...")
-    scraping = Scraping(url="https://www4.nhk.or.jp/sunshine/66/")
-    html = scraping.html
+    scraper = Scraping()
+    scraper.url = (
+        "https://www.nhk.jp/p/sunshine/rs/ZYKKWY88Z9/blog/bl/prGL2NxxRv/bp/pvq3pX7g6O/"
+    )
+    scraper.html = scraper.get_html(scraper.url)
 
-    on_air_date = scraping.get_on_air_date(html)
-    track_list = scraping.generate_track_list(html)
+    date_html = scraper.html.find("div", class_="article-text").find("strong")
+    on_air_date = scraper.get_on_air_date(date_html)
+
+    track_html = scraper.html.find("div", class_="article-text").find("ol")
+    track_list = scraper.generate_track_list(track_html)
 
     print(f"The scraping result on {on_air_date} is the following...")
     [print(i) for i in track_list]
