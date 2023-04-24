@@ -12,10 +12,16 @@ def handler(cloud_event):
     pubsub_message = base64.b64decode(cloud_event.data["message"]["data"]).decode()
     print(f"Pub/Sub message is {pubsub_message}")
     print("A scraping procedure starts...")
+
+    top_url = "https://www.nhk.jp/p/sunshine/rs/ZYKKWY88Z9/blog/bl/prGL2NxxRv/list/"
+    top_data = requests.get(top_url)
+    top_soup = BeautifulSoup(top_data.content, "html.parser")
+    playlist_url = top_soup.find("div", class_="blog-articles").find(
+        "a", class_="bpItem", href=True
+    )["href"]
+
     scraper = Scraping()
-    scraper.url = (
-        "https://www.nhk.jp/p/sunshine/rs/ZYKKWY88Z9/blog/bl/prGL2NxxRv/bp/pvq3pX7g6O/"
-    )
+    scraper.url = playlist_url
     scraper.html = scraper.get_html(scraper.url)
 
     date_html = scraper.html.find("div", class_="article-text").find("strong")
