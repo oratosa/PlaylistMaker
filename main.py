@@ -46,24 +46,29 @@ def handler(cloud_event):
 
     # make a playlist
     available_uris = [row[0] for row in uris if row[0] != "URI is not found"]
-    name = f"Weekend Sunshine by Peter Barakan {on_air_date}"
-    description = (
-        """NHKのラジオ番組 Weekend Sunshine で放送された楽曲をプレイリストにしています。自動的に作成しているため誤りがあるかもしれません。"""
-    )
 
-    playlist_id = playlistmaker.identify_playlist(name)
-    if playlist_id is None:
-        playlistmaker.make_playlist(name, description, available_uris)
-        print("A new playlist was made.")
-    else:  ## if the playlist is already existed, remove the tracks and readd the tracks.
-        track_list = playlistmaker.get_tracks_from_playlist(playlist_id)
-        playlistmaker.sp.playlist_remove_all_occurrences_of_items(
-            playlist_id, track_list
-        )
-        playlistmaker.sp.playlist_add_items(playlist_id, available_uris)
-        print("The tracks in the existing playlist were deleted and added again.")
+    if len(available_uris) > 0:
+        name = f"Weekend Sunshine by Peter Barakan {on_air_date}"
+        description = """NHKのラジオ番組 Weekend Sunshine で放送された楽曲をプレイリストにしています。自動的に作成しているため誤りがあるかもしれません。"""
 
-    print("The procedure was finished.")
+        playlist_id = playlistmaker.identify_playlist(name)
+        if playlist_id is None:
+            playlistmaker.make_playlist(name, description, available_uris)
+            print("A new playlist was made.")
+        else:  ## if the playlist is already existed, remove the tracks and readd the tracks.
+            track_list = playlistmaker.get_tracks_from_playlist(playlist_id)
+            playlistmaker.sp.playlist_remove_all_occurrences_of_items(
+                playlist_id, track_list
+            )
+            playlistmaker.sp.playlist_add_items(playlist_id, available_uris)
+            print("The tracks in the existing playlist were deleted and added again.")
+
+        print("The procedure was finished.")
+
+    else:
+        print("No songs are registered on Spotify.")
+        print("It skips making a playlist.")
+        print("The procedure was finished.")
 
 
 class Scraping:
