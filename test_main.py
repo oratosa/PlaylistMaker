@@ -8,7 +8,7 @@ from datetime import datetime
 def sample_scraper():
     scraper = Scraping()
     scraper.url = (
-        "https://www.nhk.jp/p/sunshine/rs/ZYKKWY88Z9/blog/bl/prGL2NxxRv/bp/pvq3pX7g6O/"
+        "https://www.nhk.jp/p/sunshine/rs/ZYKKWY88Z9/blog/bl/prGL2NxxRv/bp/pkd9r03agZ/"
     )
     scraper.html = scraper.get_html(scraper.url)
     yield scraper
@@ -20,9 +20,9 @@ def test_get_html(sample_scraper: Scraping):
 
 
 def test_get_on_air_date(sample_scraper: Scraping):
-    html = sample_scraper.html.find("div", class_="article-text").find("strong")
+    html = sample_scraper.html.find("div", class_="article-text").find("p")
     on_air_date = sample_scraper.get_on_air_date(html)
-    test_date = datetime.strptime("2023-4-22", "%Y-%m-%d").date()
+    test_date = datetime.strptime("2023-5-13", "%Y-%m-%d").date()
     assert on_air_date == test_date
 
 

@@ -24,7 +24,7 @@ def handler(cloud_event):
     scraper.url = playlist_url
     scraper.html = scraper.get_html(scraper.url)
 
-    date_html = scraper.html.find("div", class_="article-text").find("strong")
+    date_html = scraper.html.find("div", class_="article-text").find("p")
     on_air_date = scraper.get_on_air_date(date_html)
 
     track_html = scraper.html.find("div", class_="article-text").find("ol")
