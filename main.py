@@ -4,6 +4,7 @@ from spotipy.oauth2 import SpotifyOAuth
 import functions_framework
 from bs4 import BeautifulSoup
 from datetime import datetime
+import json
 
 
 @functions_framework.cloud_event
@@ -24,20 +25,23 @@ def handler(cloud_event):
     scraper.url = playlist_url
     scraper.html = scraper.get_html(scraper.url)
 
-    date_html = scraper.html.find("div", class_="article-text").find("p")
-    on_air_date = scraper.get_on_air_date(date_html)
+    page_title = scraper.html.head.title.text.split()[
+        0
+    ]  # "MM月DD日のプレイリスト - ウィークエンドサンシャイン - NHK"をスペースで分割して最初の要素を取得
 
-    track_html = scraper.html.find("div", class_="article-text").find("ol")
-    track_list = scraper.generate_track_list(track_html)
+    playlist = scraper.extract_playlist(page_title)
+
+    on_air_date = scraper.get_on_air_date(playlist)
+    playlist_for_spotify_input = scraper.generate_track_list(playlist)
 
     print(f"The scraping result on {on_air_date} is the following...")
-    [print(i) for i in track_list]
+    [print(i) for i in playlist_for_spotify_input]
 
     # spotify authorization
     playlistmaker = PlaylistMaker()
 
     # get the track information from spotify
-    uris = playlistmaker.generate_track_id_list(track_list)
+    uris = playlistmaker.generate_track_id_list(playlist_for_spotify_input)
 
     print(
         f"Track's Spotify URIs based on the scraping result on {on_air_date} are the following..."
@@ -82,26 +86,40 @@ class Scraping:
         soup = BeautifulSoup(data.content, "html.parser")
         return soup
 
-    def get_on_air_date(self, html) -> datetime.date:
-        text = html.get_text()
-        text = unicodedata.normalize("NFKC", text)
+    def extract_playlist(self, page_title: str) -> list:
+        nuxt_data = json.loads(
+            self.html.find("script", id="__NUXT_DATA__").get_text()
+        )  # nuxtのデータを取得
+        for i, v in enumerate(nuxt_data):
+            if v == page_title:
+                playlist_text = nuxt_data[i + 2]
+                break
+        playlist = playlist_text.split("\n\n")
+        return playlist
+
+    def get_on_air_date(self, playlist: list) -> datetime.date:
+        text = unicodedata.normalize("NFKC", playlist[0])
         result = re.findall(r"[0-9]+", text)
         on_air_date = "-".join(result)
         on_air_date = datetime.strptime(on_air_date, "%Y-%m-%d").date()
         return on_air_date
 
-    def generate_track_list(self, html) -> list:
-        track_list = []
-        for i, l in enumerate(html.find_all("li")):
-            num = str(i + 1).zfill(2)
-            text = l.text.strip()
-            text = unicodedata.normalize("NFKC", text)
-            track = re.sub(r"( / )|( // )", "//", text)  # （曲順. 曲名 / アーティスト名 // アルバム名）
-            track = re.sub(r"'", "'", track)
-            track = num + "//" + track
-            track = track.split("//")
-            track_list.append(track)
-        return track_list
+    def generate_track_list(self, playlist: list) -> list:
+        output_playlist = []
+        prev_i = playlist.index("（曲名 / アーティスト名 // アルバム名）")
+        for v in playlist[prev_i + 1 :]:
+            preprocessed1 = unicodedata.normalize("NFKC", v.strip())
+            preprocessed2 = re.sub(
+                r"(\. )", "//", preprocessed1
+            )  # "曲順. 曲名 / アーティスト名 // アルバム名" -> "曲順// 曲名 / アーティスト名 // アルバム名"
+            preprocessed3 = re.sub(
+                r"( / )", "//", preprocessed2
+            )  # "曲順// 曲名 / アーティスト名 // アルバム名" -> "曲順// 曲名 // アーティスト名 // アルバム名"
+            track = preprocessed3.split(
+                "//"
+            )  # "曲順// 曲名 // アーティスト名 // アルバム名" -> ["曲順", "曲名", " アーティスト名 ", " アルバム名]
+            output_playlist.append([i.strip() for i in track])
+        return output_playlist
 
 
 class PlaylistMaker:
