@@ -59,7 +59,7 @@ def handler(cloud_event):
         if playlist_id is None:
             playlistmaker.make_playlist(name, description, available_uris)
             print("A new playlist was made.")
-        else:  ## if the playlist is already existed, remove the tracks and readd the tracks.
+        else:  ## if the playlist is already existed, remove the tracks and read the tracks.
             track_list = playlistmaker.get_tracks_from_playlist(playlist_id)
             playlistmaker.sp.playlist_remove_all_occurrences_of_items(
                 playlist_id, track_list
@@ -110,14 +110,14 @@ class Scraping:
         for v in playlist[prev_i + 1 :]:
             preprocessed1 = unicodedata.normalize("NFKC", v.strip())
             preprocessed2 = re.sub(
-                r"(\. )", "//", preprocessed1
+                r"(([0-9])\. )", "\\2//", preprocessed1
             )  # "曲順. 曲名 / アーティスト名 // アルバム名" -> "曲順// 曲名 / アーティスト名 // アルバム名"
             preprocessed3 = re.sub(
                 r"( / )", "//", preprocessed2
             )  # "曲順// 曲名 / アーティスト名 // アルバム名" -> "曲順// 曲名 // アーティスト名 // アルバム名"
             track = preprocessed3.split(
                 "//"
-            )  # "曲順// 曲名 // アーティスト名 // アルバム名" -> ["曲順", "曲名", " アーティスト名 ", " アルバム名]
+            )  # "曲順// 曲名 // アーティスト名 // アルバム名" -> ["曲順", "曲名", "アーティスト名", "アルバム名"]
             output_playlist.append([i.strip() for i in track])
         return output_playlist
 
