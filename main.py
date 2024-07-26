@@ -149,21 +149,13 @@ class PlaylistMaker:
     def generate_track_id_list(self, scraping_result: list) -> list:
         uris = []
         for row in scraping_result:
-            if len(row) == 4:
-                track = row[1] if row[1] else None
-                artist = row[2] if row[2] else None
-                album = row[3] if row[3] else None
-                uri = self.get_spotify_track_info(track, artist, album)
-                uris.append(uri)
-            else:
-                track = row[1] if row[1] else None
-                artist = row[2] if row[2] else None
-                album = None
-                uri = self.get_spotify_track_info(track, artist, album)
-                uris.append(uri)
+            track = row[1] if row[1] else None
+            artist = row[2] if row[2] else None
+            uri = self.get_spotify_track_info(track, artist)
+            uris.append(uri)
         return uris
 
-    def get_spotify_track_info(self, track: str, artist: str, album: str) -> tuple:
+    def get_spotify_track_info(self, track: str, artist: str) -> tuple:
         query = f"{track} artist:{artist}"
         results = self.sp.search(q=query, type="track", limit=50)
 
@@ -181,13 +173,9 @@ class PlaylistMaker:
                 artist_name = result["artists"][0]["name"]
                 album_name = result["album"]["name"]
 
-                if (
-                    track_name in track
-                    and artist_name in artist
-                    and album_name in album
-                ):
+                if track_name in track and artist_name in artist:
                     print(
-                        f"Track:{track_name}, Artist:{artist_name}, Album:{album_name} were all matched!!!"
+                        f"Track:{track_name} and Artist:{artist_name} were matched. The Album is {album_name}."
                     )
                     candidate = (uri, track_name, artist_name, album_name)
 
@@ -196,7 +184,7 @@ class PlaylistMaker:
             return candidate
 
         else:
-            candidate = ("URI is not found", track, artist, album)
+            candidate = ("URI is not found", track, artist)
             return candidate
 
     def make_playlist(self, name: str, description: str, uris: list) -> str:
